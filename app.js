@@ -8,7 +8,7 @@ var express = require('express'),
   http = require('http'),
   everyauth = require('everyauth'),
   jade = require('jade'),
-  RedisStore = require('connect-redis')(express);
+  connectRedis = require('connect-redis')(express);
 
 var app = express();
 var redis = require('redis').createClient();
@@ -30,9 +30,9 @@ everyauth.facebook
   .appId(FB_APP_ID)
   .appSecret(FB_APP_SECRET)
   .scope('user_birthday,user_about_me')
-  .findOrCreateUser(function(session, access_token, accessTokExtra, user) {
+  .findOrCreateUser(function(session, accessToken, accessTokExtra, user) {
       session.user = user;
-      session.access_token = access_token;
+      session.access_token = accessToken;
       return user;
   })
   .logoutPath('/logout')
@@ -60,7 +60,7 @@ app.configure(function(){
   //Session
   app.use(express.session({
       secret: 'fa8232889ff9323d7ed8368a410a4027',
-      store: new RedisStore({ client: redis })
+      store: new connectRedis({ client: redis })
   }));
 
   app.use(everyauth.middleware());
@@ -80,7 +80,11 @@ app.get('/', function(request, response){
     return response.redirect('/auth/facebook');
   }
 
-  var context = {};
+  var user = request.session.user
+
+  var context = {
+    user: user
+  };
 
   return response.render('index', context);
 });
