@@ -13,6 +13,8 @@ var express = require('express'),
 var app = express();
 var redis = require('redis').createClient();
 
+redis.debug_mode = true;
+
 /*
 var
   FB_APP_ID = "439348696080450",
@@ -33,6 +35,7 @@ everyauth.facebook
   .findOrCreateUser(function(session, accessToken, accessTokExtra, user) {
       session.user = user;
       session.access_token = accessToken;
+     
       return user;
   })
   .logoutPath('/logout')
@@ -42,10 +45,6 @@ everyauth.facebook
       response.redirect('/');
   })
   .redirectPath('/');
-
-//everyauth.helpExpress(app);
-
-//app.register('.html', jade);
 
 app.configure(function(){
   //view stuff
@@ -76,11 +75,24 @@ app.configure('development', function(){
 });
 
 app.get('/', function(request, response){
-  if (!request.session.user) {
+  var user = request.session.user;
+  
+  if (!user) {
     return response.redirect('/auth/facebook');
+  } 
+
+  var userKey = 'user:' + user.id;
+
+  if(redis.exists(userKey)) {
+    redis.set(userKey, JSON.stringify(user), function(){
+      console.log('user saved');
+    });
+    redis.lpush('users', userKey)
   }
 
-  var user = request.session.user
+  redis.get(userKey, function(err, reply){
+    console.log(JSON.parse(reply))
+  });
 
   var context = {
     user: user
